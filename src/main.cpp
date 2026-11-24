@@ -84,51 +84,57 @@ namespace Modular_Arithmetics {
     const ll MOD = 100000007LL;
 
     ll norm_mod(ll x, ll mod_val) {
-        return ((x % mod_val) + mod_val) % mod_val;
+        if (mod_val <= 0) return 0;
+        ll result = x % mod_val;
+        return result < 0 ? result + mod_val : result;
     }
 
     ll mod_add_2(ll a, ll b, ll mod_val) {
         if (mod_val <= 0) return 0;
-        return (norm_mod(a, mod_val) + norm_mod(b, mod_val)) % mod_val;
+        a = norm_mod(a, mod_val);
+        b = norm_mod(b, mod_val);
+        return a >= mod_val - b ? a - (mod_val - b) : a + b;
     }
 
     ll mod_add_n(const v<ll>& A, ll mod_val) {
         if (mod_val <= 0) return 0;
-        ll rez = 0;
-        for (size_t idx = 0; idx < A.size(); ++idx) {
-            rez = (rez + norm_mod(A[idx], mod_val)) % mod_val;
+        ll result = 0;
+        for (ll value : A) {
+            result = mod_add_2(result, value, mod_val);
         }
-        return rez;
+        return result;
     }
 
     ll mod_subtract_2(ll a, ll b, ll mod_val) {
         if (mod_val <= 0) return 0;
-        ll x = norm_mod(a, mod_val);
-        ll y = norm_mod(b, mod_val);
-        return (x - y + mod_val) % mod_val;
+        a = norm_mod(a, mod_val);
+        b = norm_mod(b, mod_val);
+        return a >= b ? a - b : mod_val - (b - a);
     }
 
     ll mod_subtract_n(const v<ll>& A, ll mod_val) {
         if (mod_val <= 0 || A.empty()) return 0;
-        ll rez = norm_mod(A[0], mod_val);
+        ll result = norm_mod(A[0], mod_val);
         for (size_t idx = 1; idx < A.size(); ++idx) {
-            rez = (rez - norm_mod(A[idx], mod_val) + mod_val) % mod_val;
+            result = mod_subtract_2(result, A[idx], mod_val);
         }
-        return rez;
+        return result;
     }
 
     ll mod_multiply_2(ll a, ll b, ll mod_val) {
         if (mod_val <= 0) return 0;
-        return (norm_mod(a, mod_val) * norm_mod(b, mod_val)) % mod_val;
+        a = norm_mod(a, mod_val);
+        b = norm_mod(b, mod_val);
+        return static_cast<ll>((__int128)a * b % mod_val);
     }
 
     ll mod_multiply_n(const v<ll>& A, ll mod_val) {
         if (mod_val <= 0) return 0;
-        ll rez = 1 % mod_val;
-        for (size_t idx = 0; idx < A.size(); ++idx) {
-            rez = (rez * norm_mod(A[idx], mod_val)) % mod_val;
+        ll result = 1 % mod_val;
+        for (ll value : A) {
+            result = mod_multiply_2(result, value, mod_val);
         }
-        return rez;
+        return result;
     }
 
     ll gcdExtended(ll a, ll b, ll& x, ll& y) {
@@ -140,20 +146,36 @@ namespace Modular_Arithmetics {
 
         ll x1, y1;
         ll gcd = gcdExtended(b % a, a, x1, y1);
-
         x = y1 - (b / a) * x1;
         y = x1;
-
         return gcd;
     }
 
     ll modInverse(ll b, ll mod_val) {
         if (mod_val <= 0) return -1;
-        b = norm_mod(b, mod_val);
-        ll x, y;
-        ll g = gcdExtended(b, mod_val, x, y);
-        if (g != 1) return -1;
-        return norm_mod(x, mod_val);
+
+        __int128 old_r = norm_mod(b, mod_val);
+        __int128 r = mod_val;
+        __int128 old_s = 1;
+        __int128 s = 0;
+
+        while (r != 0) {
+            __int128 quotient = old_r / r;
+
+            __int128 next_r = old_r - quotient * r;
+            old_r = r;
+            r = next_r;
+
+            __int128 next_s = old_s - quotient * s;
+            old_s = s;
+            s = next_s;
+        }
+
+        if (old_r != 1) return -1;
+
+        old_s %= mod_val;
+        if (old_s < 0) old_s += mod_val;
+        return static_cast<ll>(old_s);
     }
 
     ll mod_divide_2(ll a, ll b, ll mod_val) {
@@ -161,30 +183,35 @@ namespace Modular_Arithmetics {
         a = norm_mod(a, mod_val);
         ll inv = modInverse(b, mod_val);
         if (inv == -1) return -1;
-        return (a * inv) % mod_val;
+        return mod_multiply_2(a, inv, mod_val);
     }
 
     ll mod_factorial(ll a, ll mod_val) {
         if (mod_val <= 0 || a < 0) return 0;
         if (mod_val == 1 || a >= mod_val) return 0;
 
-        ll rez = 1 % mod_val;
+        ll result = 1 % mod_val;
         for (ll k = 2; k <= a; ++k) {
-            rez = mod_multiply_2(rez, k, mod_val);
+            result = mod_multiply_2(result, k, mod_val);
         }
-        return rez;
+        return result;
     }
 
     ll mod_exponent(ll a, ll b, ll mod_val) {
         if (mod_val <= 0 || b < 0) return 0;
-        if (b == 0) return 1 % mod_val;
+        if (mod_val == 1) return 0;
 
+        ll result = 1 % mod_val;
         ll base = norm_mod(a, mod_val);
-        if (b % 2 == 0) {
-            ll half = mod_exponent(base, b / 2, mod_val);
-            return mod_multiply_2(half, half, mod_val);
+
+        while (b > 0) {
+            if (b & 1LL) {
+                result = mod_multiply_2(result, base, mod_val);
+            }
+            base = mod_multiply_2(base, base, mod_val);
+            b >>= 1LL;
         }
-        return mod_multiply_2(base, mod_exponent(base, b - 1, mod_val), mod_val);
+        return result;
     }
 } // namespace Modular_Arithmetics
 
@@ -193,18 +220,26 @@ namespace Number_Theory {
         vp<ll, i> factors;
         if (X <= 1) return factors;
 
-        ll d = 2;
-        while (d <= X / d) {
-            i p_cnt = 0;
+        if (X % 2 == 0) {
+            i count = 0;
+            while (X % 2 == 0) {
+                ++count;
+                X /= 2;
+            }
+            factors.push_back({2, count});
+        }
+
+        for (ll d = 3; d <= X / d; d += 2) {
+            i count = 0;
             while (X % d == 0) {
-                ++p_cnt;
+                ++count;
                 X /= d;
             }
-            if (p_cnt > 0) {
-                factors.push_back({d, p_cnt});
+            if (count > 0) {
+                factors.push_back({d, count});
             }
-            ++d;
         }
+
         if (X > 1) {
             factors.push_back({X, 1});
         }
@@ -214,31 +249,23 @@ namespace Number_Theory {
     ll phi(ll X) {
         if (X <= 0) return 0;
         if (X == 1) return 1;
+
+        ll result = X;
         vp<ll, i> factors = get_prime_factorization(X);
-        ll rez = 1;
-        for (size_t idx = 0; idx < factors.size(); ++idx) {
-            ll prime = factors[idx].first;
-            i exp_val = factors[idx].second;
-
-            ll prime_pow = 1;
-            for (i step = 1; step < exp_val; ++step) {
-                prime_pow *= prime;
-            }
-
-            rez *= prime_pow * (prime - 1);
+        for (const auto& factor : factors) {
+            ll prime = factor.first;
+            result -= result / prime;
         }
-        return rez;
+        return result;
     }
 
-    bool is_prime(ll X)
-    {
-        if(X < 2) return false;
-        else if(X == 2) return true;
-        else if(X % 2 == 0) return false;
+    bool is_prime(ll X) {
+        if (X < 2) return false;
+        if (X == 2) return true;
+        if (X % 2 == 0) return false;
 
-        for(ll d = 3; d * d <= X; d++)
-        {
-            if(X % d == 0) return false;
+        for (ll d = 3; d <= X / d; d += 2) {
+            if (X % d == 0) return false;
         }
         return true;
     }
@@ -247,150 +274,92 @@ namespace Number_Theory {
 namespace Combinatorics {
     template <typename OkFn, typename SolFn, typename ShowFn>
     void BackTracking(ll k, ll n, v<ll>& X, OkFn OK, SolFn Solution, ShowFn Show) {
-        if (n <= 0 || k < 1 || k > n) {
-            return;
-        }
+        if (n <= 0 || k < 1 || k > n) return;
 
         for (ll val = 1; val <= n; ++val) {
             X[k] = val;
             if (OK(X, k)) {
-                if (Solution(k)) {
-                    Show(X, k);
-                }
-                if (k < n) {
-                    BackTracking(k + 1, n, X, OK, Solution, Show);
-                }
+                if (Solution(k)) Show(X, k);
+                if (k < n) BackTracking(k + 1, n, X, OK, Solution, Show);
             }
         }
     }
 
-    /* ================= ARRANGEMENTS (VARIAȚIUNI) ================= */
-
-    // Arrangements of size p from 1..n (no repeated elements, order matters)
     void GenerateArrangements(ll n, ll p, ofstream& fout) {
-        if (n <= 0 || p <= 0 || p > n) {
-            return;
-        }
-
+        if (n <= 0 || p <= 0 || p > n) return;
         v<ll> X(p + 1, 0);
 
         auto OK = [](const v<ll>& arr, ll pos) {
-            for (ll idx = 1; idx < pos; ++idx) {
-                if (arr[pos] == arr[idx]) {
-                    return false;
-                }
-            }
+            for (ll idx = 1; idx < pos; ++idx)
+                if (arr[pos] == arr[idx]) return false;
             return true;
         };
-
-        auto Solution = [p](ll pos) {
-            return pos == p;
-        };
-
-        auto Show = [p, &fout](const v<ll>& arr, ll /*pos*/) {
-            for (ll idx = 1; idx <= p; ++idx) {
+        auto Solution = [p](ll pos) { return pos == p; };
+        auto Show = [p, &fout](const v<ll>& arr, ll) {
+            for (ll idx = 1; idx <= p; ++idx)
                 fout << arr[idx] << (idx == p ? '\n' : ' ');
-            }
         };
 
         BackTracking(1, n, X, OK, Solution, Show);
     }
 
-    // Arrangements of size p drawn from 0-indexed set vals
     void GenerateArrangementsFromSet(const v<ll>& vals, ll p, ofstream& fout) {
         ll n = static_cast<ll>(vals.size());
-        if (n <= 0 || p <= 0 || p > n) {
-            return;
-        }
-
+        if (n <= 0 || p <= 0 || p > n) return;
         v<ll> X(p + 1, 0);
 
         auto OK = [](const v<ll>& arr, ll pos) {
-            for (ll idx = 1; idx < pos; ++idx) {
-                if (arr[pos] == arr[idx]) {
-                    return false;
-                }
-            }
+            for (ll idx = 1; idx < pos; ++idx)
+                if (arr[pos] == arr[idx]) return false;
             return true;
         };
-
-        auto Solution = [p](ll pos) {
-            return pos == p;
-        };
-
-        auto Show = [p, &vals, &fout](const v<ll>& arr, ll /*pos*/) {
-            for (ll idx = 1; idx <= p; ++idx) {
+        auto Solution = [p](ll pos) { return pos == p; };
+        auto Show = [p, &vals, &fout](const v<ll>& arr, ll) {
+            for (ll idx = 1; idx <= p; ++idx)
                 fout << vals[arr[idx] - 1] << (idx == p ? '\n' : ' ');
-            }
         };
 
         BackTracking(1, n, X, OK, Solution, Show);
     }
 
-    // All non-empty arrangements of any length 1..n from 0-indexed set vals
     void GenerateAllArrangements(const v<ll>& vals, ofstream& fout) {
         ll n = static_cast<ll>(vals.size());
-        if (n <= 0) {
-            return;
-        }
-
+        if (n <= 0) return;
         v<ll> X(n + 1, 0);
 
         auto OK = [](const v<ll>& arr, ll pos) {
-            for (ll idx = 1; idx < pos; ++idx) {
-                if (arr[pos] == arr[idx]) {
-                    return false;
-                }
-            }
+            for (ll idx = 1; idx < pos; ++idx)
+                if (arr[pos] == arr[idx]) return false;
             return true;
         };
-
-        auto Solution = [](ll /*pos*/) {
-            return true;
-        };
-
+        auto Solution = [](ll) { return true; };
         auto Show = [&vals, &fout](const v<ll>& arr, ll pos) {
-            for (ll idx = 1; idx <= pos; ++idx) {
+            for (ll idx = 1; idx <= pos; ++idx)
                 fout << vals[arr[idx] - 1] << (idx == pos ? '\n' : ' ');
-            }
         };
 
         BackTracking(1, n, X, OK, Solution, Show);
     }
 
-    /* ================= COMBINATIONS & SUBSETS ================= */
-    /* ================= COMBINATION PARTIAL SUMS ================= */
-
-    // Stores the sums of all k-element combinations from 0-indexed set vals
     void StoreCombinationSums(const v<ll>& vals, ll k, v<ll>& out_sums) {
         ll n = static_cast<ll>(vals.size());
-        if (n <= 0 || k <= 0 || k > n) {
-            return;
-        }
-
+        if (n <= 0 || k <= 0 || k > n) return;
         v<ll> X(k + 1, 0);
 
         auto OK = [](const v<ll>& arr, ll pos) {
-            if (pos == 1) return true;
-            return arr[pos] > arr[pos - 1];
+            return pos == 1 || arr[pos] > arr[pos - 1];
         };
-
-        auto Solution = [k](ll pos) {
-            return pos == k;
-        };
-
-        auto CollectSum = [k, &vals, &out_sums](const v<ll>& arr, ll /*pos*/) {
+        auto Solution = [k](ll pos) { return pos == k; };
+        auto Collect = [k, &vals, &out_sums](const v<ll>& arr, ll) {
             ll sum = 0;
-            for (ll idx = 1; idx <= k; ++idx) {
+            for (ll idx = 1; idx <= k; ++idx)
                 sum += vals[arr[idx] - 1];
-            }
             out_sums.push_back(sum);
         };
 
-        BackTracking(1, n, X, OK, Solution, CollectSum);
+        BackTracking(1, n, X, OK, Solution, Collect);
     }
 
-    // Prints the sums of all k-element combinations from 0-indexed set vals to fout
     void PrintCombinationSums(const v<ll>& vals, ll k, ofstream& fout) {
         v<ll> sums;
         StoreCombinationSums(vals, k, sums);
@@ -401,107 +370,71 @@ namespace Combinatorics {
         fout << '\n';
     }
 
-    // Combinations of size p from 1..n (strictly increasing indices/values)
     void GenerateCombinations(ll n, ll p, ofstream& fout) {
-        if (n <= 0 || p <= 0 || p > n) {
-            return;
-        }
-
+        if (n <= 0 || p <= 0 || p > n) return;
         v<ll> X(p + 1, 0);
 
         auto OK = [](const v<ll>& arr, ll pos) {
-            if (pos == 1) return true;
-            return arr[pos] > arr[pos - 1];
+            return pos == 1 || arr[pos] > arr[pos - 1];
         };
-
-        auto Solution = [p](ll pos) {
-            return pos == p;
-        };
-
-        auto Show = [p, &fout](const v<ll>& arr, ll /*pos*/) {
-            for (ll idx = 1; idx <= p; ++idx) {
+        auto Solution = [p](ll pos) { return pos == p; };
+        auto Show = [p, &fout](const v<ll>& arr, ll) {
+            for (ll idx = 1; idx <= p; ++idx)
                 fout << arr[idx] << (idx == p ? '\n' : ' ');
-            }
         };
 
         BackTracking(1, n, X, OK, Solution, Show);
     }
 
-    // Combinations of size p drawn from 0-indexed set vals (printed to fout)
     void GenerateCombinationsFromSet(const v<ll>& vals, ll p, ofstream& fout) {
         ll n = static_cast<ll>(vals.size());
-        if (n <= 0 || p <= 0 || p > n) {
-            return;
-        }
-
+        if (n <= 0 || p <= 0 || p > n) return;
         v<ll> X(p + 1, 0);
 
         auto OK = [](const v<ll>& arr, ll pos) {
-            if (pos == 1) return true;
-            return arr[pos] > arr[pos - 1];
+            return pos == 1 || arr[pos] > arr[pos - 1];
         };
-
-        auto Solution = [p](ll pos) {
-            return pos == p;
-        };
-
-        auto Show = [p, &vals, &fout](const v<ll>& arr, ll /*pos*/) {
-            for (ll idx = 1; idx <= p; ++idx) {
+        auto Solution = [p](ll pos) { return pos == p; };
+        auto Show = [p, &vals, &fout](const v<ll>& arr, ll) {
+            for (ll idx = 1; idx <= p; ++idx)
                 fout << vals[arr[idx] - 1] << (idx == p ? '\n' : ' ');
-            }
         };
 
         BackTracking(1, n, X, OK, Solution, Show);
     }
 
-    // Combinations of size p drawn from 0-indexed set vals (stored in out_subsets)
     void StoreCombinationsFromSet(const v<ll>& vals, ll p, m<ll>& out_subsets) {
         ll n = static_cast<ll>(vals.size());
-        if (n <= 0 || p <= 0 || p > n) {
-            return;
-        }
-
+        if (n <= 0 || p <= 0 || p > n) return;
         v<ll> X(p + 1, 0);
 
         auto OK = [](const v<ll>& arr, ll pos) {
-            if (pos == 1) return true;
-            return arr[pos] > arr[pos - 1];
+            return pos == 1 || arr[pos] > arr[pos - 1];
         };
-
-        auto Solution = [p](ll pos) {
-            return pos == p;
-        };
-
-        auto Collect = [p, &vals, &out_subsets](const v<ll>& arr, ll /*pos*/) {
+        auto Solution = [p](ll pos) { return pos == p; };
+        auto Collect = [p, &vals, &out_subsets](const v<ll>& arr, ll) {
             v<ll> cur;
             cur.reserve(static_cast<size_t>(p));
-            for (ll idx = 1; idx <= p; ++idx) {
+            for (ll idx = 1; idx <= p; ++idx)
                 cur.push_back(vals[arr[idx] - 1]);
-            }
             out_subsets.push_back(move(cur));
         };
 
         BackTracking(1, n, X, OK, Solution, Collect);
     }
 
-    // Subsets of exact size p from 1..n
     void GenerateSubsetsOfSize(ll n, ll p, ofstream& fout) {
         GenerateCombinations(n, p, fout);
     }
 
-    // All non-empty subsets of size 1..n from 1..n
     void GenerateAllSubsets(ll n, ofstream& fout) {
-        for (ll p = 1; p <= n; ++p) {
+        for (ll p = 1; p <= n; ++p)
             GenerateSubsetsOfSize(n, p, fout);
-        }
     }
 
-    // Subsets of exact size p drawn from 0-indexed set A (p = 0 outputs a blank line)
     void GenerateSubsetsOfSizeFromSet(const v<ll>& A, ll p, ofstream& fout) {
         ll n = static_cast<ll>(A.size());
-        if (p < 0 || p > n) {
-            return;
-        }
+        if (p < 0 || p > n) return;
         if (p == 0) {
             fout << '\n';
             return;
@@ -509,12 +442,9 @@ namespace Combinatorics {
         GenerateCombinationsFromSet(A, p, fout);
     }
 
-    // Store subsets of exact size p drawn from 0-indexed set A (p = 0 stores an empty subset {})
     void StoreSubsetsOfSizeFromSet(const v<ll>& A, ll p, m<ll>& out_subsets) {
         ll n = static_cast<ll>(A.size());
-        if (p < 0 || p > n) {
-            return;
-        }
+        if (p < 0 || p > n) return;
         if (p == 0) {
             out_subsets.push_back({});
             return;
@@ -522,66 +452,44 @@ namespace Combinatorics {
         StoreCombinationsFromSet(A, p, out_subsets);
     }
 
-    // All subsets (sizes 0..n) drawn from 0-indexed set A (printed to fout)
     void GenerateAllSubsetsFromSet(const v<ll>& A, ofstream& fout) {
         ll n = static_cast<ll>(A.size());
-        for (ll p = 0; p <= n; ++p) {
+        for (ll p = 0; p <= n; ++p)
             GenerateSubsetsOfSizeFromSet(A, p, fout);
-        }
     }
 
-    // All non-empty subsets/combinations of elements from 0-indexed set A (printed to fout)
     void GenerateAllCombinations(const v<ll>& A, ofstream& fout) {
         ll n = static_cast<ll>(A.size());
-        if (n <= 0) {
-            return;
-        }
-
+        if (n <= 0) return;
         v<ll> X(n + 1, 0);
 
         auto OK = [](const v<ll>& arr, ll pos) {
-            if (pos == 1) return true;
-            return arr[pos] > arr[pos - 1];
+            return pos == 1 || arr[pos] > arr[pos - 1];
         };
-
-        auto Solution = [](ll /*pos*/) {
-            return true;
-        };
-
+        auto Solution = [](ll) { return true; };
         auto Show = [&A, &fout](const v<ll>& arr, ll pos) {
-            for (ll idx = 1; idx <= pos; ++idx) {
+            for (ll idx = 1; idx <= pos; ++idx)
                 fout << A[arr[idx] - 1] << (idx == pos ? '\n' : ' ');
-            }
         };
 
         BackTracking(1, n, X, OK, Solution, Show);
     }
 
-    // Store all non-empty subsets/combinations of elements from 0-indexed set A
     m<ll> StoreAllCombinations(const v<ll>& A) {
         m<ll> subsets;
         ll n = static_cast<ll>(A.size());
-        if (n <= 0) {
-            return subsets;
-        }
-
+        if (n <= 0) return subsets;
         v<ll> X(n + 1, 0);
 
         auto OK = [](const v<ll>& arr, ll pos) {
-            if (pos == 1) return true;
-            return arr[pos] > arr[pos - 1];
+            return pos == 1 || arr[pos] > arr[pos - 1];
         };
-
-        auto Solution = [](ll /*pos*/) {
-            return true;
-        };
-
+        auto Solution = [](ll) { return true; };
         auto Collect = [&A, &subsets](const v<ll>& arr, ll pos) {
             v<ll> cur;
             cur.reserve(static_cast<size_t>(pos));
-            for (ll idx = 1; idx <= pos; ++idx) {
+            for (ll idx = 1; idx <= pos; ++idx)
                 cur.push_back(A[arr[idx] - 1]);
-            }
             subsets.push_back(move(cur));
         };
 
@@ -589,17 +497,14 @@ namespace Combinatorics {
         return subsets;
     }
 
-    // Store all subsets (sizes 0..n, including empty subset) from 0-indexed set A
     m<ll> StoreAllSubsetsFromSet(const v<ll>& A) {
         m<ll> subsets;
         ll n = static_cast<ll>(A.size());
-        for (ll p = 0; p <= n; ++p) {
+        for (ll p = 0; p <= n; ++p)
             StoreSubsetsOfSizeFromSet(A, p, subsets);
-        }
         return subsets;
     }
 
-    // Helper to print a stored collection of subsets to fout
     void PrintSubsets(const m<ll>& subsets, ofstream& fout) {
         for (size_t s_idx = 0; s_idx < subsets.size(); ++s_idx) {
             for (size_t e_idx = 0; e_idx < subsets[s_idx].size(); ++e_idx) {
@@ -610,82 +515,60 @@ namespace Combinatorics {
         }
     }
 
-    /* ================= PERMUTATIONS (PERMUTĂRI) ================= */
-
-    // All permutations of 1..n via BackTracking
     void GeneratePermutationsOfN(ll n, ofstream& fout) {
         GenerateArrangements(n, n, fout);
     }
 
-    // All permutations of 0-indexed set vals via BackTracking
     void GeneratePermutationsFromSet(const v<ll>& vals, ofstream& fout) {
         ll n = static_cast<ll>(vals.size());
-        if (n <= 0) {
-            return;
-        }
+        if (n <= 0) return;
         GenerateArrangementsFromSet(vals, n, fout);
     }
 
-    // Filtered permutation generator using STL next_permutation on a copy
     template <typename T, typename Condition, typename Action>
     void GeneratePermutations(const v<T>& arr, Condition valid, Action act) {
         v<T> perm = arr;
         sort(perm.begin(), perm.end());
         do {
-            if (valid(perm)) {
-                act(perm);
-            }
+            if (valid(perm)) act(perm);
         } while (next_permutation(perm.begin(), perm.end()));
     }
 
-    /* ================= CARTESIAN PRODUCT (PRODUS CARTEZIAN) ================= */
-
-    // Pairwise Cartesian product A x B (all pairs (a, b))
     template <typename T>
     vp<T, T> GenerateCartesianProduct(const v<T>& A, const v<T>& B) {
         vp<T, T> C;
-        for (const T& first_val : A) {
-            for (const T& second_val : B) {
+        for (const T& first_val : A)
+            for (const T& second_val : B)
                 C.push_back({first_val, second_val});
-            }
-        }
         return C;
     }
 
-    // Write pairwise Cartesian product A x B directly to fout
     template <typename T>
     void PrintCartesianProduct(const v<T>& A, const v<T>& B, ofstream& fout) {
-        for (const T& first_val : A) {
-            for (const T& second_val : B) {
+        for (const T& first_val : A)
+            for (const T& second_val : B)
                 fout << first_val << ' ' << second_val << '\n';
-            }
-        }
     }
 
-    // Ordered tuples of length p with repetition allowed from 0-indexed set vals (vals^p)
     void GenerateCartesianPowerFromSet(const v<ll>& vals, ll p, ofstream& fout) {
         ll n = static_cast<ll>(vals.size());
-        if (n <= 0 || p <= 0) {
-            return;
-        }
+        if (n <= 0 || p <= 0) return;
 
-        v<ll> X(p + 1, 0);
+        v<ll> tuple(p, 0);
+        function<void(ll)> generate = [&](ll pos) {
+            if (pos == p) {
+                for (ll idx = 0; idx < p; ++idx)
+                    fout << vals[tuple[idx]] << (idx == p - 1 ? '\n' : ' ');
+                return;
+            }
 
-        auto OK = [](const v<ll>& /*arr*/, ll /*pos*/) {
-            return true; // repetition and any order allowed
-        };
-
-        auto Solution = [p](ll pos) {
-            return pos == p;
-        };
-
-        auto Show = [p, &vals, &fout](const v<ll>& arr, ll /*pos*/) {
-            for (ll idx = 1; idx <= p; ++idx) {
-                fout << vals[arr[idx] - 1] << (idx == p ? '\n' : ' ');
+            for (ll idx = 0; idx < n; ++idx) {
+                tuple[pos] = idx;
+                generate(pos + 1);
             }
         };
 
-        BackTracking(1, max(n, p), X, OK, Solution, Show);
+        generate(0);
     }
 } // namespace Combinatorics
 
@@ -696,45 +579,30 @@ namespace Data_Structure {
 
     SubarrayResult longest_equal_subarray_1based(const vector<ll>& A) {
         ll n = static_cast<ll>(A.size()) - 1;
-        if (n <= 0) {
-            return {0};
-        }
+        if (n <= 0) return {0};
 
         ll max_len = 1, cur_len = 1;
-
         for (ll i = 2; i <= n; ++i) {
-            if (A[i] == A[i - 1]) {
-                cur_len++;
-            } else {
-                cur_len = 1;
-            }
-            if (cur_len > max_len) {
-                max_len = cur_len;
-            }
+            if (A[i] == A[i - 1]) ++cur_len;
+            else cur_len = 1;
+            max_len = max(max_len, cur_len);
         }
-
         return {max_len};
     }
 
     SubarrayResult longest_element_subarray_1based_target(const vector<ll>& A, ll target) {
         ll n = static_cast<ll>(A.size()) - 1;
-        if (n <= 0) {
-            return {0};
-        }
+        if (n <= 0) return {0};
 
         ll max_len = 0, cur_len = 0;
-
         for (ll i = 1; i <= n; ++i) {
             if (A[i] == target) {
-                cur_len++;
-                if (cur_len > max_len) {
-                    max_len = cur_len;
-                }
+                ++cur_len;
+                max_len = max(max_len, cur_len);
             } else {
                 cur_len = 0;
             }
         }
-
         return {max_len};
     }
 } // namespace Data_Structure
@@ -742,9 +610,7 @@ namespace Data_Structure {
 ifstream fin("files/cufere.in");
 ofstream fout("files/cufere.out");
 
-int main()
-{
+int main() {
     FAST_IO;
-
     return 0;
 }
