@@ -742,68 +742,9 @@ namespace Data_Structure {
 ifstream fin("files/cufere.in");
 ofstream fout("files/cufere.out");
 
-void Cer1();
-void Cer2();
-ll n;
-m<ll> A;
-struct Obiect
-{
-    ll eticheta, //ultimele 2 nr
-       nr_obiecte; //primele 2 cifre
-};
-bool cmpEticheta(const Obiect& a, const Obiect& b) {
-    if (a.eticheta != b.eticheta) {
-        return a.eticheta < b.eticheta;
-    }
-    return a.nr_obiecte < b.nr_obiecte; // tie-breaker
-}
 int main()
 {
     FAST_IO;
-    int c;
-    fin>>c;
-    switch(c)
-    {
-        case 1: Cer1(); break;
-        case 2: Cer2(); break;
-        default: break;
-    }
+
     return 0;
-}
-
-void Cer1()
-{
-    fin>>n;
-    A.assign(3 * n, v<ll>(9, 0));
-    v<Obiect> B;
-    for(int i = 0; i < (int)A.size(); i++)
-    {
-        for(int j = 0; j < (int)A[i].size(); j++)
-        {
-            fin>>A[i][j];
-        }
-    }
-    for(int i = 0; i < (int)A.size(); i++)
-    {
-        for(int j = 0; j < (int)A[i].size(); j++)
-        {
-            ll X = A[i][j];
-            Obiect obj;
-            obj.eticheta = X % 100;
-            obj.nr_obiecte = X / 100;
-            B.push_back(obj);
-        }
-    }
-    std::sort(B.begin(), B.end(), cmpEticheta); 
-    map<ll, ll> freq;
-for (const auto& elem : B) {
-    freq[elem.eticheta] += elem.nr_obiecte;
-}
-for (const auto& [element, total_obiecte] : freq) {
-    fout << element << " " << total_obiecte << '\n';
-}
-}
-void Cer2()
-{
-
 }
